@@ -770,11 +770,18 @@ impl Checker {
         // Collect declaration counts for each property across all constituent types of the intersection.
         // A name that occurs in more than one constituent occurs in one other than skipped, so skipped
         // only needs its members looked up, which may not resolve them.
+        // tsrs: a mapped type with an `as` clause is not skipped. It gets no lazy table, so a lookup resolves it in
+        // full anyway, and skipping it only moves that resolution after the other constituents'; when it reaches
+        // a type that is being resolved, the result can differ from the reference (issue #649).
         let types = t.types();
         let skipped = if self.lazy_members {
             types.iter().position(|&t| {
                 t.object_flags_lazy() & (ObjectFlags::Mapped | ObjectFlags::MembersResolved)
                     == ObjectFlags::Mapped
+                    && t.as_mapped_type()
+                        .declaration
+                        .get()
+                        .is_none_or(|d| d.as_mapped_type_node().name_type.is_none())
                     || may_have_lazy_members(t) && t.flags().intersects(TypeFlags::Object)
             })
         } else {

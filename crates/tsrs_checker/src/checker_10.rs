@@ -2532,6 +2532,7 @@ impl Checker {
         let members = SymbolTable::new();
         // Resolve upfront such that recursive references see an empty object type.
         self.set_structured_type_members(t, None, &[], &[], &[]);
+        self.mapped_types_resolving += 1;
         // In { [P in K]: T }, we refer to P as the type parameter type, K as the constraint type,
         // and T as the template type.
         let type_parameter = self.get_type_parameter_from_mapped_type(t);
@@ -2585,6 +2586,7 @@ impl Checker {
             index_infos = lazy.index_infos.get().to_vec();
         }
         self.set_structured_type_members(t, Some(members), &[], &[], &index_infos);
+        self.mapped_types_resolving -= 1;
         if let Some(timing) = self.census_end(census_span) {
             let n = members.len();
             if timing.incl_ns > crate::workcensus::slow_threshold_ns() {

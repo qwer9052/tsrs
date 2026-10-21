@@ -3109,12 +3109,17 @@ impl Checker {
             }
             return ready.construct_signatures.get();
         }
+        // Mapped types have no signatures. While another mapped type is being resolved, the reference resolves
+        // this one here, and its members can capture the other's empty up-front members (issue #649), so it
+        // is resolved then.
         if self.lazy_members && t.object_flags().intersects(ObjectFlags::Mapped) {
-            if !t.object_flags_lazy().intersects(ObjectFlags::MembersResolved) {
-                self.lazy_member_stats.mapped_signature_early_returns += 1;
+            if t.object_flags_lazy().intersects(ObjectFlags::MembersResolved) {
+                return &[];
             }
-            // Mapped types have no signatures.
-            return &[];
+            if self.mapped_types_resolving == 0 {
+                self.lazy_member_stats.mapped_signature_early_returns += 1;
+                return &[];
+            }
         }
         let resolved = self.resolve_structured_type_members(t);
         if kind == SignatureKind::Call {
